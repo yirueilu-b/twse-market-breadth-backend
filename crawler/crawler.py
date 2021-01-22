@@ -4,6 +4,8 @@ import time
 import pandas as pd
 import requests
 
+from crawler import utils
+
 DATA_DIR = 'data'
 SAVE_DIR = 'trading_history'
 LOG_PATH = os.path.join('.', 'log_{}.txt'.format(time.strftime('%Y%m%d%H%M%S')))
@@ -68,63 +70,11 @@ def get_trading_history(company_symbol, start, end):
         file.write('SUCCEEDED: {}\nINFO: {}\n\n'.format(symbol, log_info))
 
 
-def get_start_date(company_symbol, company_date, start, end):
-    """
-    some company listed on TWSE was listed later than `201001`
-    must check if the start date is valid for the company
-    :param company_symbol: int, the symbol of a company in TWSE
-    :param company_date: str, the listed date of company
-    :param start: str, default start date `201001`, could modify `START_DATE` to change this value
-    :param end: str, default is current date, could modify `END_DATE` to change this value
-    :return: str, the valid start date which could be used for crawling
-    """
-    print("Check valid start date for crawling {}...".format(company_symbol))
-    listed_date = ''.join(company_date.split('/')[:2])
-    if int(start) > int(listed_date):
-        valid_start_date = start
-        print("=" * 50 + "\n", "{} is later than {}, use {} as start date\n".format(start, listed_date, start),
-              "=" * 50 + "\n")
-        return valid_start_date
-
-    start_year = int(listed_date[:4])
-    start_month = int(listed_date[4:])
-    end_year = int(end[:4])
-    end_month = int(end[4:])
-    for year in range(start_year, end_year + 1):
-        sm, em = 1, 12
-        if year == start_year:
-            sm = max(start_month, 1)
-        if year == end_year:
-            em = min(end_month, 12)
-        for month in range(sm, em + 1):
-            time.sleep(TIME_SLEEP)
-            date = str(year) + str(month).zfill(2) + '01'
-            url = 'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&' \
-                  'date={0}&stockNo={1}'.format(date, company_symbol)
-            try:
-                request = requests.get(url)
-                if request.status_code == 200:
-                    valid_start_date = '{}{:02d}'.format(year, month)
-                    data = request.content.decode(DECODE)
-                    if not data.strip():
-                        raise Exception
-                    print("=" * 50 + "\n", "{} is valid, use {} as start date\n".format(listed_date, listed_date),
-                          "=" * 50 + "\n")
-                    return valid_start_date
-            except Exception as e:
-                print("{} is invalid, keep trying next date".format(listed_date))
-                print('ERROR:{} {}{:02d}'.format(company_symbol, year, month))
-                print(e)
-                continue
-
-    return start_date
-
-
 if __name__ == '__main__':
     company_list = pd.read_csv(os.path.join('..', DATA_DIR, 'company_list.csv'))
     for index, company in company_list.iterrows():
         symbol = company.symbol
-        start_date = get_start_date(company.symbol, company.date, START_DATE, END_DATE)
+        start_date = utils.get_start_date(company.symbol, company.date, START_DATE, END_DATE)
         des_path = os.path.join('..', DATA_DIR, SAVE_DIR, '{0}_{1}_{2}.csv'.format(symbol, start_date, END_DATE))
         if os.path.exists(des_path):
             with open(LOG_PATH, 'a') as f:
