@@ -1,0 +1,9 @@
+venv
+data
+.idea
+.ipynb_checkpoints
+
+*.pyc
+log*.txt
+
+*_dev.ipynb
