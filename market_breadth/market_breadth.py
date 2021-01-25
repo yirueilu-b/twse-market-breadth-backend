@@ -1,13 +1,9 @@
 import os
-import time
 import json
 import datetime
 
 import pandas as pd
-
-DATA_DIR = 'data'
-TRADING_DATA_DIR = 'trading_history'
-SAVE_DIR = 'market_breadth'
+from crawler import utils
 
 
 def calculate_percentage_above_ma(company_list, category, ma_window_size, date):
@@ -32,9 +28,11 @@ def calculate_percentage_above_ma(company_list, category, ma_window_size, date):
     companies = grouped_company_list.get_group(category)
     for index, company in companies.iterrows():
         symbol = company.symbol
+        if symbol in utils.SKIP_SYMBOL:
+            continue
         print(symbol, company['name'])
         """
-        according to the symbol in `crawler.py`,
+        according to the symbol in `crawler_all_history.py`,
         the start date should be 201001 or the date when company listed on TWSE
         """
         twse_list_date = int(''.join(company.date.split('/')[:2]))
@@ -49,7 +47,7 @@ def calculate_percentage_above_ma(company_list, category, ma_window_size, date):
         """
         end = str(datetime.datetime.now().year) + str(datetime.datetime.now().month).zfill(2)
         file_name = "{}_{}_{}.csv".format(symbol, start, end)
-        file_path = os.path.join('..', DATA_DIR, TRADING_DATA_DIR, file_name)
+        file_path = os.path.join('..', utils.DATA_DIR, utils.TRADING_HISTORY_DIR, file_name)
         try:
             df = pd.read_csv(file_path)
             df.date = df.date.apply(str.strip)
@@ -111,7 +109,7 @@ def organize_trading_data_as_json(date, company_list):
                 start = str(twse_list_date)
             end = str(datetime.datetime.now().year) + str(datetime.datetime.now().month).zfill(2)
             file_name = "{}_{}_{}.csv".format(company.symbol, start, end)
-            file_path = os.path.join('..', DATA_DIR, TRADING_DATA_DIR, file_name)
+            file_path = os.path.join('..', utils.DATA_DIR, utils.TRADING_HISTORY_DIR, file_name)
             try:
                 df = pd.read_csv(file_path)
                 """
@@ -144,15 +142,16 @@ def organize_trading_data_as_json(date, company_list):
 
 
 if __name__ == '__main__':
-    d = '2021/01/07'
-    company_list = pd.read_csv('../data/company_list.csv')
-    en_company_list = pd.read_csv('../data/en_company_list.csv')
-    company_list['en_name'] = en_company_list.name.apply(str.strip)
-    with open('../data/category_ch_en_map.json') as json_file:
-        category_ch_en_map = json.load(json_file)
-    res = organize_trading_data_as_json(d, company_list)
-    print(json.dumps(res, indent=4, ensure_ascii=False))
-    save_path = os.path.join('..', DATA_DIR, SAVE_DIR, '{}.json'.format(''.join(d.split('/'))))
-    with open(save_path, 'w') as f:
-        f.write(json.dumps(res, indent=4))
-
+    for i in range(5, 20):
+        d = '2021/01/{}'.format(str(i).zfill(2))
+        print(d)
+        company_list = pd.read_csv('../data/company_list.csv')
+        en_company_list = pd.read_csv('../data/en_company_list.csv')
+        company_list['en_name'] = en_company_list.name.apply(str.strip)
+        with open('../data/category_ch_en_map.json') as json_file:
+            category_ch_en_map = json.load(json_file)
+        res = organize_trading_data_as_json(d, company_list)
+        print(json.dumps(res, indent=4, ensure_ascii=False))
+        save_path = os.path.join('..', utils.DATA_DIR, utils.MARKET_BREADTH_DIR, '{}.json'.format(''.join(d.split('/'))))
+        with open(save_path, 'w') as f:
+            f.write(json.dumps(res, indent=4))

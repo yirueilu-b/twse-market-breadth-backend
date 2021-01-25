@@ -6,13 +6,6 @@ import requests
 
 from crawler import utils
 
-DATA_DIR = 'data'
-SAVE_DIR = 'trading_history'
-LOG_PATH = os.path.join('.', 'log_{}.txt'.format(time.strftime('%Y%m%d%H%M%S')))
-DECODE = 'big5'
-START_DATE, END_DATE = '201001', '202101'
-TIME_SLEEP = 3
-
 
 def get_trading_history(company_symbol, start, end):
     """
@@ -37,7 +30,7 @@ def get_trading_history(company_symbol, start, end):
         else:
             em = 12
         for month in range(sm, em + 1):
-            time.sleep(TIME_SLEEP)
+            time.sleep(utils.TIME_SLEEP)
             date = str(year) + str(month).zfill(2) + '01'
             url = 'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&' \
                   'date={0}&stockNo={1}'.format(date, company_symbol)
@@ -45,7 +38,7 @@ def get_trading_history(company_symbol, start, end):
 
             try:
                 request = requests.get(url)
-                data = request.content.decode(DECODE)
+                data = request.content.decode(utils.DECODE)
                 data = data.split("\r\n")[1:-6]
                 data = [x.replace('",', '').split('"')[1:] for x in data]
                 if date[:-2] == start:
@@ -57,28 +50,31 @@ def get_trading_history(company_symbol, start, end):
             except Exception as e:
                 print('FAILED: {} {}'.format(symbol, date))
                 print('ERROR: {}'.format(e))
-                with open(LOG_PATH, 'a') as file:
+                with open(utils.LOG_PATH, 'a') as file:
                     file.write('FAILED: {}\nERROR: {} {} {}\n\n'.format(symbol, date, url, e))
                 return
 
     df_all.columns = ['date', 'vol', 'val', 'open', 'high', 'low', 'close', 'change', 'transaction']
     df_all.date = df_all.date.apply(str.strip)
-    des = os.path.join('..', DATA_DIR, SAVE_DIR, '{0}_{1}_{2}.csv'.format(company_symbol, start, end))
+    des = os.path.join('..', utils.DATA_DIR, utils.TRADING_HISTORY_DIR, '{0}_{1}_{2}.csv'.format(company_symbol, start, end))
     df_all.to_csv(des, index=False)
-    with open(LOG_PATH, 'a') as file:
+    with open(utils.LOG_PATH, 'a') as file:
         log_info = '{} crawled successfully, saved in {}'.format(symbol, des_path)
         file.write('SUCCEEDED: {}\nINFO: {}\n\n'.format(symbol, log_info))
 
 
 if __name__ == '__main__':
-    company_list = pd.read_csv(os.path.join('..', DATA_DIR, 'company_list.csv'))
+    company_list = pd.read_csv(os.path.join('..', utils.DATA_DIR, 'company_list.csv'))
     for index, company in company_list.iterrows():
         symbol = company.symbol
-        start_date = utils.get_start_date(company.symbol, company.date, START_DATE, END_DATE)
-        des_path = os.path.join('..', DATA_DIR, SAVE_DIR, '{0}_{1}_{2}.csv'.format(symbol, start_date, END_DATE))
+        if symbol in utils.SKIP_SYMBOL:
+            continue
+        start_date = utils.get_start_date(company.symbol, company.date, utils.START_DATE, utils.END_DATE)
+        des_path = os.path.join('..', utils.DATA_DIR, utils.TRADING_HISTORY_DIR,
+                                '{0}_{1}_{2}.csv'.format(symbol, start_date, utils.END_DATE))
         if os.path.exists(des_path):
-            with open(LOG_PATH, 'a') as f:
+            with open(utils.LOG_PATH, 'a') as f:
                 info = '{} has been crawled already, saved at {}'.format(symbol, des_path)
                 f.write('SUCCEEDED: {}\nINFO: {}\n\n'.format(symbol, info))
             continue
-        get_trading_history(symbol, start_date, END_DATE)
+        get_trading_history(symbol, start_date, utils.END_DATE)

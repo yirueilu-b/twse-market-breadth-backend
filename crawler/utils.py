@@ -4,11 +4,13 @@ import time
 import requests
 
 DATA_DIR = 'data'
-SAVE_DIR = 'trading_history'
+TRADING_HISTORY_DIR = 'trading_history'
+MARKET_BREADTH_DIR = 'market_breadth'
 LOG_PATH = os.path.join('.', 'log_{}.txt'.format(time.strftime('%Y%m%d%H%M%S')))
 DECODE = 'big5'
 START_DATE, END_DATE = '201001', '202101'
 TIME_SLEEP = 3
+SKIP_SYMBOL = [6452, 6131]
 
 
 def get_start_date(company_symbol, company_date, start, end):
