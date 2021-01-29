@@ -1,70 +1,16 @@
 import os
 import json
 import datetime
+import math
+import glob
 
 import pandas as pd
 from crawler import utils
 
-
-def calculate_percentage_above_ma(company_list, category, ma_window_size, date):
-    """
-    given company list, category and window size,
-    1. group companies by category
-    2. for each company in group
-    3. calculate MA with window size and compare to close price
-    4. get last comparison and append to array (the array is storing latest comparison of each company in category)
-    5. calculate the percentage of True in array
-    :param company_list: pd.DataFrame, all companies listed on TWSE
-    :param category: str, the category of industry, could be extract from `category` column in `company list`
-    :param ma_window_size: int, interval for calculating moving average
-    :param date: the date in yyyy/mm/dd and is in
-    :return: float, the percentage of companies whose close price are above MA
-    """
-    above_ma = []
-    date = date.split('/')
-    date[0] = str(int(date[0]) - 1911)
-    date = '/'.join(date)
-    grouped_company_list = company_list.groupby('category')
-    companies = grouped_company_list.get_group(category)
-    for index, company in companies.iterrows():
-        symbol = company.symbol
-        if symbol in utils.SKIP_SYMBOL:
-            continue
-        print(symbol, company['name'])
-        """
-        according to the symbol in `crawler_all_history.py`,
-        the start date should be 201001 or the date when company listed on TWSE
-        """
-        twse_list_date = int(''.join(company.date.split('/')[:2]))
-        if 201001 > twse_list_date:
-            start = "201001"
-        else:
-            start = str(twse_list_date)
-        """
-        end must be the latest date, 
-        and must update trading history data before running this function
-        TODO: is regular expression could be better?
-        """
-        end = str(datetime.datetime.now().year) + str(datetime.datetime.now().month).zfill(2)
-        file_name = "{}_{}_{}.csv".format(symbol, start, end)
-        file_path = os.path.join('..', utils.DATA_DIR, utils.TRADING_HISTORY_DIR, file_name)
-        try:
-            df = pd.read_csv(file_path)
-            df.date = df.date.apply(str.strip)
-            # calculate ma and compare to close price
-            close = pd.to_numeric(df.close, errors='coerce')
-            close = close.fillna(method='ffill')
-            is_above_ma = (close > close.rolling(window=ma_window_size).mean())
-            target = df[df.date == date].index
-            if target.any():
-                above_ma.append(is_above_ma[target].values[0])
-        except Exception as e:
-            print("ERROR: Cannot open {}\n{}".format(file_path, e))
-    if len(above_ma):
-        percentage = above_ma.count(True) / len(above_ma) * 100
-    else:
-        percentage = -1.
-    return percentage
+TRADING_HISTORY_DIR = os.path.split(glob.glob(os.path.join('..',
+                                                           utils.DATA_DIR, utils.TRADING_HISTORY_DIR + '*'))[-1])[-1]
+all_trading_history_path = os.listdir(os.path.join('..', utils.DATA_DIR, TRADING_HISTORY_DIR))
+symbol_path_map = dict(zip([int(x.split('_')[0]) for x in all_trading_history_path], all_trading_history_path))
 
 
 def calculate_ma(close, ma_interval, target_index):
@@ -77,6 +23,22 @@ def calculate_ma(close, ma_interval, target_index):
 
 
 def organize_trading_data_as_json(date, company_list):
+    """
+    for each industry:
+        find the symbols in industry
+        for each symbols:
+            read the corresponding file
+            calculate moving average
+            compare the MA and close on given date
+
+    """
+    """
+    industry_summary = {ma5:[res, res, ...], ma10:[], ...}
+    res is the comparison result of MA and close on given date for symbol i
+    """
+    """
+    industry_detail = [{symbol:, name:, ...}, {}]
+    """
     date = date.split('/')
     date[0] = str(int(date[0]) - 1911)
     date = '/'.join(date)
@@ -84,74 +46,86 @@ def organize_trading_data_as_json(date, company_list):
     industry_category = company_list.category.unique()
     ma_intervals = [5, 10, 20, 60]
     result = dict()
-    """
-    for each industry
-    """
+    index_summary = dict(zip(["ma{}".format(ma) for ma in ma_intervals], [[] for _ in range(len(ma_intervals))]))
+
     for category in industry_category:
         grouped_company_list = company_list.groupby('category').get_group(category)
-        summary = dict(zip(["ma{}".format(ma) for ma in ma_intervals], [[] for _ in range(len(ma_intervals))]))
-        detail = []
-        """ 
-        for each company in industry
-        """
+        industry_summary = dict(zip(["ma{}".format(ma) for ma in ma_intervals], [[] for _ in range(len(ma_intervals))]))
+        industry_detail = []
         for index, company in grouped_company_list.iterrows():
             company_detail = dict()
+            if company.symbol not in symbol_path_map:
+                continue
+            file_name = symbol_path_map[company.symbol]
+            file_path = os.path.join('..', utils.DATA_DIR, TRADING_HISTORY_DIR, file_name)
+            # print(file_path)
+            df = pd.read_csv(file_path)
+            df.date = df.date.apply(str.strip)
+            target_index = df[df.date == date].index
+            if len(target_index) == 0:
+                continue
+            close = pd.to_numeric(df.close, errors='coerce')
+            close = close.fillna(method='ffill')
+
+            for ma in ma_intervals:
+                is_above, ma_value = calculate_ma(close, ma, target_index)
+                if math.isnan(ma_value):
+                    company_detail['ma{}'.format(ma)] = -1
+                    continue
+                else:
+                    industry_summary['ma{}'.format(ma)].append(is_above)
+                    index_summary['ma{}'.format(ma)].append(is_above)
+                    company_detail['ma{}'.format(ma)] = ma_value
+
             company_detail['symbol'] = company.symbol
             company_detail['name'] = company['name']
             company_detail['en_name'] = company['en_name']
-            """
-            read company trading data
-            """
-            twse_list_date = int(''.join(company.date.split('/')[:2]))
-            if 201001 > twse_list_date:
-                start = "201001"
+            company_detail['close_price'] = close[target_index].values[0]
+            if df.change[target_index].values[0] == 'X0.00':
+                pass
             else:
-                start = str(twse_list_date)
-            end = str(datetime.datetime.now().year) + str(datetime.datetime.now().month).zfill(2)
-            file_name = "{}_{}_{}.csv".format(company.symbol, start, end)
-            file_path = os.path.join('..', utils.DATA_DIR, utils.TRADING_HISTORY_DIR, file_name)
-            try:
-                df = pd.read_csv(file_path)
-                """
-                target_index to select given date
-                """
-                target_index = df[df.date == date].index
-                close = pd.to_numeric(df.close, errors='coerce')
-                close = close.fillna(method='ffill')
-                company_detail['close_price'] = close[target_index].values[0]
                 company_detail['change'] = float(df.change[target_index].values[0])
-                for ma in ma_intervals:
-                    is_above, ma_value = calculate_ma(close, ma, target_index)
-                    company_detail['ma{}'.format(ma)] = ma_value
-                    summary['ma{}'.format(ma)].append(is_above)
-            except Exception as e:
-                for ma in ma_intervals:
-                    company_detail['ma{}'.format(ma)] = -1
-                    summary['ma{}'.format(ma)].append(None)
-                # print(company.symbol)
-            detail.append(company_detail)
+            industry_detail.append(company_detail)
 
-        for k, v in summary.items():
-            if None not in v and v:
-                summary[k] = v.count(True) / len(v) * 100
+        for ma in ma_intervals:
+            industry_summary["ma{}_count".format(ma)] = len(industry_summary["ma{}".format(ma)])
+        for k, v in industry_summary.items():
+            if 'count' not in k:
+                if v:
+                    industry_summary[k] = v.count(True) / len(v) * 100
+                else:
+                    industry_summary[k] = -1
+
+        result[category] = {"summary": industry_summary, "detail": industry_detail}
+        print(category, industry_summary)
+
+    for ma in ma_intervals:
+        index_summary["ma{}_count".format(ma)] = len(index_summary["ma{}".format(ma)])
+    for k, v in index_summary.items():
+        if 'count' not in k:
+            if v:
+                index_summary[k] = v.count(True) / len(v) * 100
             else:
-                summary[k] = -1.
+                index_summary[k] = -1
 
-        result[category_ch_en_map[category]] = {"summary": summary, "detail": detail}
+    print(index_summary)
+    result['大盤'] = {"summary": index_summary}
+
     return result
 
 
 if __name__ == '__main__':
-    for i in range(5, 20):
+    company_list = pd.read_csv('../data/company_list.csv')
+    en_company_list = pd.read_csv('../data/en_company_list.csv')
+    company_list['en_name'] = en_company_list.name.apply(str.strip)
+    with open('../data/category_ch_en_map.json') as json_file:
+        category_ch_en_map = json.load(json_file)
+    for i in range(4, 29 + 1):
         d = '2021/01/{}'.format(str(i).zfill(2))
-        print(d)
-        company_list = pd.read_csv('../data/company_list.csv')
-        en_company_list = pd.read_csv('../data/en_company_list.csv')
-        company_list['en_name'] = en_company_list.name.apply(str.strip)
-        with open('../data/category_ch_en_map.json') as json_file:
-            category_ch_en_map = json.load(json_file)
+        print("Generate JSON Data for {}".format(d))
         res = organize_trading_data_as_json(d, company_list)
-        print(json.dumps(res, indent=4, ensure_ascii=False))
-        save_path = os.path.join('..', utils.DATA_DIR, utils.MARKET_BREADTH_DIR, '{}.json'.format(''.join(d.split('/'))))
+        # print(json.dumps(res, indent=4, ensure_ascii=False))
+        save_path = os.path.join('..', utils.DATA_DIR, utils.MARKET_BREADTH_DIR,
+                                 '{}.json'.format(''.join(d.split('/'))))
         with open(save_path, 'w') as f:
             f.write(json.dumps(res, indent=4))

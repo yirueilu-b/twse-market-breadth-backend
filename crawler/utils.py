@@ -7,7 +7,7 @@ DATA_DIR = 'data'
 TRADING_HISTORY_DIR = 'trading_history'
 MARKET_BREADTH_DIR = 'market_breadth'
 LOG_PATH = os.path.join('.', 'log_{}.txt'.format(time.strftime('%Y%m%d%H%M%S')))
-DECODE = 'big5'
+DECODE = 'cp950'
 START_DATE, END_DATE = '201001', '202101'
 TIME_SLEEP = 3
 SKIP_SYMBOL = [6452, 6131]
@@ -27,7 +27,7 @@ def get_start_date(company_symbol, company_date, start, end):
     print("Check valid start date for crawling {}...".format(company_symbol))
     listed_date = ''.join(company_date.split('/')[:2])
     if int(start) > int(listed_date):
-        print("=" * 50 + "\n", "{} is later than {}, use {} as start date\n".format(start, listed_date, start),
+        print("=" * 50 + "\n" + "{} is later than {}, use {} as start date\n".format(start, listed_date, start) +
               "=" * 50 + "\n")
         return valid_start_date
 
@@ -53,7 +53,7 @@ def get_start_date(company_symbol, company_date, start, end):
                     data = request.content.decode(DECODE)
                     if not data.strip():
                         raise Exception
-                    print("=" * 50 + "\n", "{} is valid, use {} as start date\n".format(listed_date, listed_date),
+                    print("=" * 50 + "\n", "{} is valid, use {} as start date\n".format(listed_date, listed_date) +
                           "=" * 50 + "\n")
                     return valid_start_date
             except Exception as e:
