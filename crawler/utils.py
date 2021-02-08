@@ -5,6 +5,7 @@ import requests
 
 DATA_DIR = 'data'
 TRADING_HISTORY_DIR = 'trading_history'
+INDEX_HISTORY_DIR = 'index_history'
 MARKET_BREADTH_DIR = 'market_breadth'
 LOG_PATH = os.path.join('.', 'log_{}.txt'.format(time.strftime('%Y%m%d%H%M%S')))
 DECODE = 'cp950'
