@@ -27,7 +27,11 @@ The code for crawling, updating and cleaning data for visualizing Taiwan market 
                 "ma5": 14.285714285714285,
                 "ma10": 28.57142857142857,
                 "ma20": 42.857142857142854,
-                "ma60": 85.71428571428571
+                "ma60": 85.71428571428571,
+                "ma5_count": 947,
+                "ma10_count": 945,
+                "ma20_count": 940,
+                "ma60_count": 940
             },
             "detail": [
                 {
@@ -56,7 +60,8 @@ The code for crawling, updating and cleaning data for visualizing Taiwan market 
 
 ## TODO
 
-- script for updating history trading data
+- bash script for updating history trading data
 
-- visualize the market breadth
+- update `README.md`
 
+- crawl index info

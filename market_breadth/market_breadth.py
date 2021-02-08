@@ -120,12 +120,12 @@ if __name__ == '__main__':
     company_list['en_name'] = en_company_list.name.apply(str.strip)
     with open('../data/category_ch_en_map.json') as json_file:
         category_ch_en_map = json.load(json_file)
-    for i in range(4, 29 + 1):
-        d = '2021/01/{}'.format(str(i).zfill(2))
-        print("Generate JSON Data for {}".format(d))
-        res = organize_trading_data_as_json(d, company_list)
-        # print(json.dumps(res, indent=4, ensure_ascii=False))
-        save_path = os.path.join('..', utils.DATA_DIR, utils.MARKET_BREADTH_DIR,
-                                 '{}.json'.format(''.join(d.split('/'))))
-        with open(save_path, 'w') as f:
-            f.write(json.dumps(res, indent=4))
+    for month in [str(datetime.datetime.now().month - 1).zfill(2), str(datetime.datetime.now().month).zfill(2)]:
+        for day in range(1, datetime.datetime.now().day):
+            d = '2021/01/{}'.format(month, str(day).zfill(2))
+            print("Generate JSON Data for {}".format(d))
+            res = organize_trading_data_as_json(d, company_list)
+            # print(json.dumps(res, indent=4, ensure_ascii=False))
+            save_path = os.path.join('..', utils.DATA_DIR, utils.MARKET_BREADTH_DIR, '{}.json'.format(''.join(d.split('/'))))
+            with open(save_path, 'w') as f:
+                f.write(json.dumps(res, indent=4))
