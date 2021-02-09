@@ -77,4 +77,4 @@ if __name__ == '__main__':
             time.sleep(3)
         df_new = df_old.merge(df_new, how='outer')
         df_new.to_csv(dst_path, index=False)
-        print('Done {}, {}'.format(company_symbol, src_path))
+        print('Done {}\n old {}\nupdate to {}'.format(company_symbol, src_path, dst_path))

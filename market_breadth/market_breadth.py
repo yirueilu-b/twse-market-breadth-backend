@@ -122,7 +122,7 @@ if __name__ == '__main__':
         category_ch_en_map = json.load(json_file)
     for month in [str(datetime.datetime.now().month - 1).zfill(2), str(datetime.datetime.now().month).zfill(2)]:
         for day in range(1, datetime.datetime.now().day):
-            d = '2021/01/{}'.format(month, str(day).zfill(2))
+            d = '2021/{}/{}'.format(month, str(day).zfill(2))
             print("Generate JSON Data for {}".format(d))
             res = organize_trading_data_as_json(d, company_list)
             # print(json.dumps(res, indent=4, ensure_ascii=False))
