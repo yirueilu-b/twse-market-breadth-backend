@@ -33,6 +33,8 @@ def get_latest_trading_data(symbol, update_date):
     df = pd.DataFrame(data[1:], columns=data[0])
     df.columns = ['date', 'vol', 'val', 'open', 'high', 'low', 'close', 'change', 'transaction']
     df.date = df.date.apply(str.strip)
+    for col in df.columns[3:7]:
+        df[col] = df[col].str.replace(',', '')
     return df
 
 

@@ -1,5 +1,6 @@
 import os
 import time
+import datetime
 
 import requests
 
@@ -9,7 +10,7 @@ INDEX_HISTORY_DIR = 'index_history'
 MARKET_BREADTH_DIR = 'market_breadth'
 LOG_PATH = os.path.join('.', 'log_{}.txt'.format(time.strftime('%Y%m%d%H%M%S')))
 DECODE = 'cp950'
-START_DATE, END_DATE = '201001', '202101'
+START_DATE, END_DATE = '201001', str(datetime.datetime.now().year).zfill(2) + str(datetime.datetime.now().month).zfill(2)
 TIME_SLEEP = 3
 SKIP_SYMBOL = [6452, 6131]
 

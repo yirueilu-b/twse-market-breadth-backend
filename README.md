@@ -52,9 +52,9 @@ The code for crawling, updating and cleaning data for visualizing Taiwan market 
 
 ## The Moving Average Visualization
 
-![](./crawler/ma_visualize.jpg)
+![](crawler/visualize_ma.jpg)
 
-![](./crawler/ma_compare_visualize.jpg)
+![](crawler/visualize_ma_close.jpg)
 
 > Green highlight means that the close price is greater than the value of moving average, whereas red does not
 
