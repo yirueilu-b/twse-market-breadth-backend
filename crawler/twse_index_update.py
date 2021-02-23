@@ -6,7 +6,7 @@ import glob
 import pandas as pd
 import requests
 
-from crawler import utils
+import utils
 
 # yyyymm
 UPDATE_DATE = '{}{}'.format(datetime.datetime.now().year, str(datetime.datetime.now().month).zfill(2))
